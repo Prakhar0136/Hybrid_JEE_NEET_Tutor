@@ -1,41 +1,77 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
+# ===================================================
+# Dependencies
+# ===================================================
+node_modules/
+*/node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# ===================================================
+# Environment Variables & Secrets (CRITICAL)
+# ===================================================
+.env
+.env*.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+frontend/.env.local
 
-# vercel
-.vercel
+# ===================================================
+# Next.js / Frontend Builds
+# ===================================================
+frontend/.next/
+frontend/out/
+frontend/build/
+.next/
+out/
+build/
+dist/
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# ===================================================
+# Python / Machine Learning / Virtual Environments
+# ===================================================
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.ipynb_checkpoints/
+
+# ===================================================
+# Vector Store / Embeddings Cache
+# ===================================================
+# Generated locally via ingest.js
+backend/vector_store/
+vector_store/
+*.faiss
+*.pkl
+
+# ===================================================
+# Large Data / PDFs (optional: avoid committing heavy PDFs)
+# ===================================================
+# backend/data/*.pdf
+
+# ===================================================
+# Logs & Runtime Data
+# ===================================================
+*.log
+logs/
+*.pid
+*.seed
+*.pid.lock
+
+# ===================================================
+# IDEs & System Files
+# ===================================================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+.gemini/
