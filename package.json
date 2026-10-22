@@ -1,12 +1,5 @@
 {
-  "devDependencies": {
-    "@types/js-cookie": "^3.0.6"
-  },
-  "dependencies": {
-    "@hookform/resolvers": "^5.9.1",
-    "axios": "^1.20.0",
-    "js-cookie": "^3.0.8",
-    "react-hook-form": "^7.90.0",
-    "zod": "^3.25.76"
-  }
+  "name": "jee-neet-tutor",
+  "version": "1.0.0",
+  "private": true
 }
