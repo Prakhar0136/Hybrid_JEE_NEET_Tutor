@@ -35,11 +35,25 @@ async function initRAG() {
     }
 }
 
-exports.generateAnswer = async (query) => {
+exports.generateAnswer = async (query, history = []) => {
     await initRAG();
 
+    // Format conversation history (take at most last 6 messages)
+    const formattedHistory = Array.isArray(history)
+        ? history
+            .filter(msg => (msg.role === 'user' || msg.role === 'assistant') && typeof msg.content === 'string')
+            .slice(-6)
+            .map(msg => ({ role: msg.role, content: msg.content }))
+        : [];
+
+    // Contextual query expansion for follow-up questions
+    const lastUserMsg = [...formattedHistory].reverse().find(m => m.role === 'user');
+    const searchQuery = (query.trim().split(/\s+/).length < 5 && lastUserMsg)
+        ? `${lastUserMsg.content} ${query}`
+        : query;
+
     // Stage 1: Fast Retrieval (Get top 10 chunks via FAISS)
-    const top10Docs = await vectorStore.similaritySearch(query, 10);
+    const top10Docs = await vectorStore.similaritySearch(searchQuery, 10);
 
     // Stage 2: Reranking (Score each query-chunk pair)
     const scoredDocs = await Promise.all(top10Docs.map(async (doc) => {
@@ -65,11 +79,14 @@ Provide answers formatted in Markdown. Use LaTeX for math equations.
 Context:
 ${contextText}`;
 
+    const messages = [
+        { role: 'system', content: systemPrompt },
+        ...formattedHistory,
+        { role: 'user', content: query }
+    ];
+
     const completion = await groq.chat.completions.create({
-        messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: query }
-        ],
+        messages,
         model: process.env.GROQ_MODEL || 'openai/gpt-oss-120b',
         temperature: 0.2,
     });

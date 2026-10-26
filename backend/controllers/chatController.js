@@ -2,12 +2,12 @@ const ragService = require('../services/ragService');
 
 exports.askQuestion = async (req, res) => {
     try {
-        const { query } = req.body;
+        const { query, history } = req.body;
         if (!query) {
             return res.status(400).json({ message: "Query is required" });
         }
 
-        const result = await ragService.generateAnswer(query);
+        const result = await ragService.generateAnswer(query, history);
 
         res.json({
             answer: result.answer,

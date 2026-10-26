@@ -17,7 +17,8 @@ exports.signup = async (req, res) => {
 
     res.status(201).json({ message: 'User created successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    console.error("Signup error:", error);
+    res.status(500).json({ message: error.message || 'Server error' });
   }
 };
 
@@ -39,7 +40,8 @@ exports.login = async (req, res) => {
 
     res.json({ access_token: token });
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    console.error("Login error:", error);
+    res.status(500).json({ message: error.message || 'Server error' });
   }
 };
 
@@ -48,6 +50,7 @@ exports.getMe = async (req, res) => {
     const user = await User.findById(req.user.userId).select('-password');
     res.json(user);
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    console.error("getMe error:", error);
+    res.status(500).json({ message: error.message || 'Server error' });
   }
 };
