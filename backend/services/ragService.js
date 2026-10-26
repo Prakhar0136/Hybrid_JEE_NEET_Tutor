@@ -38,28 +38,12 @@ async function initRAG() {
 exports.generateAnswer = async (query, history = []) => {
     await initRAG();
 
-    // Format conversation history (take at most last 6 messages)
-    const formattedHistory = Array.isArray(history)
-        ? history
-            .filter(msg => (msg.role === 'user' || msg.role === 'assistant') && typeof msg.content === 'string')
-            .slice(-6)
-            .map(msg => ({ role: msg.role, content: msg.content }))
-        : [];
-
-    // Contextual query expansion for follow-up questions
-    const lastUserMsg = [...formattedHistory].reverse().find(m => m.role === 'user');
-    const searchQuery = (query.trim().split(/\s+/).length < 5 && lastUserMsg)
-        ? `${lastUserMsg.content} ${query}`
-        : query;
-
     // Stage 1: Fast Retrieval (Get top 10 chunks via FAISS)
-    const top10Docs = await vectorStore.similaritySearch(searchQuery, 10);
+    const top10Docs = await vectorStore.similaritySearch(query, 10);
 
-    // Stage 2: Reranking (Score each query-chunk pair)
+    // Stage 2: Reranking (Score each query-chunk pair via Cross-Encoder)
     const scoredDocs = await Promise.all(top10Docs.map(async (doc) => {
-        // Xenova expects texts as an array of [query, document] for cross-encoders
         const result = await crossEncoder([query, doc.pageContent]);
-        // The model outputs a score, usually the first element
         const score = result[0]?.score || 0;
         return { ...doc, score };
     }));
@@ -70,23 +54,29 @@ exports.generateAnswer = async (query, history = []) => {
 
     const contextText = top3Docs.map((doc, i) => `[Source ${i + 1}]: ${doc.pageContent}`).join('\n\n');
 
-    // Stage 3: LLM Generation via Groq (Llama-3)
+    // Format history for Groq (limit to last 4 messages to save tokens)
+    const formattedHistory = Array.isArray(history)
+        ? history.slice(-4).map(msg => ({
+            role: msg.role,
+            content: msg.content
+        }))
+        : [];
+
     const systemPrompt = `You are an expert JEE/NEET AI Tutor. 
 Answer the user's question based strictly on the provided NCERT context. 
+If the user asks in Hinglish, respond in Hinglish.
 If the answer is not in the context, say "I don't have enough information in the NCERT syllabus to answer this."
 Provide answers formatted in Markdown. Use LaTeX for math equations.
 
 Context:
 ${contextText}`;
 
-    const messages = [
-        { role: 'system', content: systemPrompt },
-        ...formattedHistory,
-        { role: 'user', content: query }
-    ];
-
     const completion = await groq.chat.completions.create({
-        messages,
+        messages: [
+            { role: 'system', content: systemPrompt },
+            ...formattedHistory,
+            { role: 'user', content: query }
+        ],
         model: process.env.GROQ_MODEL || 'openai/gpt-oss-120b',
         temperature: 0.2,
     });
