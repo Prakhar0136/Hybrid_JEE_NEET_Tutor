@@ -1,144 +1,138 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+type AnalyticsData = {
+    metrics: {
+        totalTests: number;
+        averageScore: string;
+        topWeakTopics: string[];
+    };
+    recentSubmissions: { createdAt: string; score: number; totalQuestions: number }[];
+};
 
 export default function Dashboard() {
-    const [user, setUser] = useState<{ name: string, email: string } | null>(null);
+    const [data, setData] = useState<AnalyticsData | null>(null);
+    const [error, setError] = useState<string | null>(null);
     const router = useRouter();
 
-    useEffect(() => {
-        const fetchUser = async () => {
-            const token = Cookies.get('token');
-            if (!token) {
+    const fetchAnalytics = useCallback(async () => {
+        const token = Cookies.get('token');
+        if (!token) {
+            router.push('/login');
+            return;
+        }
+
+        try {
+            setError(null);
+            const res = await axios.get('http://localhost:5000/api/test/analytics', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setData(res.data);
+        } catch (err: any) {
+            console.error('Failed to fetch analytics:', err);
+            if (err.response?.status === 401) {
+                Cookies.remove('token');
                 router.push('/login');
                 return;
             }
-            try {
-                const res = await axios.get(`${API_BASE}/api/users/me`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                setUser(res.data);
-            } catch (error) {
-                console.error("Failed to fetch user", error);
-                Cookies.remove('token');
-                router.push('/login');
-            }
-        };
-        fetchUser();
+            setError(err.response?.data?.message || 'Failed to load analytics. Please check that the backend is running.');
+        }
     }, [router]);
 
-    const handleLogout = () => {
-        Cookies.remove('token');
-        router.push('/login');
-    };
+    useEffect(() => {
+        fetchAnalytics();
+    }, [fetchAnalytics]);
 
-    if (!user) {
+    if (error) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-600">
-                <div className="flex items-center gap-3">
-                    <span className="w-3 h-3 rounded-full bg-blue-600 animate-ping"></span>
-                    <span>Loading dashboard...</span>
-                </div>
+            <div className="flex h-screen flex-col items-center justify-center gap-4 bg-gray-50 p-6 text-center">
+                <p className="text-red-600 font-medium">{error}</p>
+                <button
+                    onClick={fetchAnalytics}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                >
+                    Try Again
+                </button>
             </div>
         );
     }
 
+    if (!data) return <div className="flex h-screen items-center justify-center">Loading Dashboard...</div>;
+
+    // Format chart data
+    const chartData = data.recentSubmissions.map((sub, idx) => ({
+        name: `Test ${idx + 1}`,
+        score: sub.totalQuestions > 0 ? (sub.score / sub.totalQuestions) * 100 : 0
+    }));
+
     return (
-        <div className="min-h-screen bg-slate-50 text-slate-900">
-            {/* Header */}
-            <header className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center shadow-xs">
-                <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-blue-600 text-white font-bold flex items-center justify-center text-sm">
-                        JT
-                    </div>
-                    <span className="font-semibold text-slate-800">JEE/NEET Tutor</span>
-                </div>
-                <div className="flex items-center gap-4">
-                    <span className="text-sm text-slate-600 hidden sm:inline">{user.email}</span>
+        <div className="min-h-screen bg-gray-50 p-8">
+            <div className="max-w-6xl mx-auto">
+                <div className="flex justify-between items-center mb-8">
+                    <h1 className="text-3xl font-bold text-gray-800">Your AI Study Dashboard</h1>
                     <button
-                        onClick={handleLogout}
-                        className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs sm:text-sm font-medium px-3.5 py-1.5 rounded-lg transition-colors"
+                        onClick={() => router.push('/test')}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition"
                     >
-                        Logout
+                        Start New Test
                     </button>
                 </div>
-            </header>
 
-            {/* Main Content */}
-            <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-                {/* Greeting Hero */}
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 sm:p-8 text-white shadow-md mb-8">
-                    <h1 className="text-2xl sm:text-3xl font-bold mb-2">Welcome back, {user.name}!</h1>
-                    <p className="text-blue-100 text-sm sm:text-base max-w-xl">
-                        Your personalized AI tutor is ready to help you crack JEE and NEET with NCERT-grounded explanations, formula breakdowns, and practice.
-                    </p>
-                </div>
-
-                {/* Modules Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* AI Chat Card */}
-                    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
-                        <div>
-                            <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl mb-4 font-semibold">
-                                💬
-                            </div>
-                            <h2 className="text-lg font-bold text-slate-800 mb-1">NCERT AI Tutor</h2>
-                            <p className="text-sm text-slate-600 mb-6">
-                                Ask doubt questions, physics derivations, organic reaction mechanisms, and biology concepts with step-by-step LaTeX math.
-                            </p>
-                        </div>
-                        <Link
-                            href="/chat"
-                            className="w-full text-center py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-sm transition-colors shadow-xs"
-                        >
-                            Open Chat Tutor →
-                        </Link>
+                {/* Top Metric Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 className="text-gray-500 text-sm font-semibold uppercase tracking-wider mb-2">Total Tests Taken</h3>
+                        <p className="text-4xl font-bold text-blue-600">{data.metrics.totalTests}</p>
                     </div>
-
-                    {/* Flashcards Card */}
-                    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
-                        <div>
-                            <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl mb-4 font-semibold">
-                                📇
-                            </div>
-                            <h2 className="text-lg font-bold text-slate-800 mb-1">Revision Flashcards</h2>
-                            <p className="text-sm text-slate-600 mb-6">
-                                Quick spaced-repetition cards covering high-yield formulas, physical constants, and definitions.
-                            </p>
-                        </div>
-                        <Link
-                            href="/flashcards"
-                            className="w-full text-center py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium rounded-xl text-sm transition-colors"
-                        >
-                            Review Flashcards →
-                        </Link>
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 className="text-gray-500 text-sm font-semibold uppercase tracking-wider mb-2">Average Accuracy</h3>
+                        <p className="text-4xl font-bold text-green-600">{data.metrics.averageScore}%</p>
                     </div>
-
-                    {/* Mock Test Card */}
-                    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
-                        <div>
-                            <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl mb-4 font-semibold">
-                                📝
-                            </div>
-                            <h2 className="text-lg font-bold text-slate-800 mb-1">Practice Test</h2>
-                            <p className="text-sm text-slate-600 mb-6">
-                                Attempt chapter-wise timed quizzes and get instant RAG-based diagnostic evaluations.
-                            </p>
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 className="text-gray-500 text-sm font-semibold uppercase tracking-wider mb-2">Needs Improvement</h3>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                            {data.metrics.topWeakTopics.length > 0 ? (
+                                data.metrics.topWeakTopics.map(topic => (
+                                    <span key={topic} className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+                                        {topic}
+                                    </span>
+                                ))
+                            ) : (
+                                <span className="text-gray-400">Take tests to identify weak areas</span>
+                            )}
                         </div>
-                        <Link
-                            href="/test"
-                            className="w-full text-center py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium rounded-xl text-sm transition-colors"
-                        >
-                            Start Practice Test →
-                        </Link>
                     </div>
                 </div>
-            </main>
+
+                {/* Performance Chart */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h2 className="text-xl font-bold text-gray-800 mb-6">Performance Trend</h2>
+                    <div className="h-80 w-full">
+                        {chartData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                                    <XAxis dataKey="name" stroke="#6B7280" fontSize={12} tickLine={false} />
+                                    <YAxis stroke="#6B7280" fontSize={12} tickLine={false} domain={[0, 100]} />
+                                    <Tooltip
+                                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                    />
+                                    <Line type="monotone" dataKey="score" stroke="#2563EB" strokeWidth={3} dot={{ r: 4, fill: '#2563EB' }} activeDot={{ r: 6 }} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="flex h-full items-center justify-center text-gray-400">
+                                Complete your first test to see your progress chart.
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+            </div>
         </div>
     );
 }
