@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
+import { v4 as uuidv4 } from 'uuid';
 
 type Question = { _id: string; topic: string; text: string; options: string[] };
 
@@ -12,9 +13,11 @@ export default function TestEngine() {
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes (300 seconds)
   const [loading, setLoading] = useState(true);
+  const [submissionId, setSubmissionId] = useState('');
   const router = useRouter();
 
   useEffect(() => {
+    setSubmissionId(uuidv4());
     fetchTest();
   }, []);
 
@@ -62,10 +65,21 @@ export default function TestEngine() {
   };
 
   const submitTest = async () => {
-    // In Day 7, we will send these answers to the backend for scoring
-    console.log("Submitting Answers:", answers);
-    alert("Test Submitted! (Scoring logic coming in Day 7)");
-    router.push('/dashboard');
+    const token = Cookies.get('token');
+    const finalSubmissionId = submissionId || uuidv4();
+    try {
+      await axios.post('http://localhost:5000/api/test/submit', {
+        submissionId: finalSubmissionId,
+        answers
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      alert("Test Submitted Successfully!");
+      router.push('/dashboard');
+    } catch (error) {
+      alert("Failed to submit test.");
+    }
   };
 
   if (loading) return <div className="flex h-screen items-center justify-center">Loading Test...</div>;
