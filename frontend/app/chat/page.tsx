@@ -105,8 +105,28 @@ export default function Chat() {
       {/* Sidebar */}
       <aside className="w-64 bg-gray-900 text-white flex flex-col">
         <div className="p-4 flex justify-between items-center border-b border-gray-700">
-          <h2 className="font-bold">Past Chats</h2>
-          <button onClick={() => router.push('/dashboard')} className="text-xs text-gray-400 hover:text-white">Dash</button>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="flex items-center gap-1.5 text-sm font-semibold text-gray-300 hover:text-white transition"
+          >
+            ← Dashboard
+          </button>
+          <div className="flex gap-2 text-xs">
+            <button
+              onClick={() => router.push('/flashcards')}
+              className="px-2 py-1 rounded bg-gray-800 text-gray-300 hover:text-white hover:bg-gray-700 transition"
+              title="Flashcards"
+            >
+              📚
+            </button>
+            <button
+              onClick={() => router.push('/test')}
+              className="px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 transition"
+              title="Mock Test"
+            >
+              📝
+            </button>
+          </div>
         </div>
         <div className="p-4">
           <button
