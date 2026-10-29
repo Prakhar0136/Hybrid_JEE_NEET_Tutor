@@ -95,7 +95,20 @@ export default function TestEngine() {
 
         {/* Header & Timer */}
         <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm mb-6">
-          <h1 className="text-xl font-bold text-gray-800">JEE/NEET Mock Test</h1>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                if (confirm("Are you sure you want to exit the test? Your progress will not be saved.")) {
+                  router.push('/dashboard');
+                }
+              }}
+              className="text-sm font-semibold text-gray-500 hover:text-gray-800 transition"
+            >
+              ← Exit Test
+            </button>
+            <span className="text-gray-300">|</span>
+            <h1 className="text-xl font-bold text-gray-800">JEE/NEET Mock Test</h1>
+          </div>
           <div className={`font-mono text-xl font-bold ${timeLeft < 60 ? 'text-red-600' : 'text-blue-600'}`}>
             Time Left: {minutes}:{seconds.toString().padStart(2, '0')}
           </div>
