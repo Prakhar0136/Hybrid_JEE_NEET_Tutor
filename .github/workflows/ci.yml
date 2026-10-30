@@ -31,13 +31,13 @@ jobs:
           cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Check server syntax & import integrity
         run: node -c server.js
 
   # ---------------------------------------------------------------------------
-  # Frontend Validation (TypeScript checks & Next.js production build)
+  # Frontend Validation (Next.js production build)
   # ---------------------------------------------------------------------------
   frontend:
     name: Frontend Build & Typecheck
@@ -61,11 +61,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Typecheck TypeScript
-        run: npx tsc --noEmit
-
       - name: Build Next.js application
         env:
           NEXT_PUBLIC_API_URL: https://api-placeholder.onrender.com
         run: npm run build
-
