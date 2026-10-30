@@ -1,7 +1,15 @@
 const { FaissStore } = require('@langchain/community/vectorstores/faiss');
-const { pipeline } = require('@xenova/transformers');
 const path = require('path');
 const Groq = require('groq-sdk');
+
+let pipelineModule = null;
+async function getPipeline() {
+    if (!pipelineModule) {
+        const module = await import('@xenova/transformers');
+        pipelineModule = module.pipeline;
+    }
+    return pipelineModule;
+}
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -10,6 +18,7 @@ class LocalMiniLMEmbeddings {
     constructor() { this.extractor = null; }
     async init() {
         if (!this.extractor) {
+            const pipeline = await getPipeline();
             this.extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
         }
     }
@@ -31,6 +40,7 @@ async function initRAG() {
     }
     if (!crossEncoder) {
         // Cross-Encoder for Stage 2 Reranking
+        const pipeline = await getPipeline();
         crossEncoder = await pipeline('text-classification', 'Xenova/ms-marco-MiniLM-L-6-v2');
     }
 }

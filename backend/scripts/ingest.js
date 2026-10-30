@@ -3,8 +3,16 @@ const fs = require('fs');
 const path = require('path');
 const { PDFParse } = require('pdf-parse');
 const { RecursiveCharacterTextSplitter } = require("@langchain/textsplitters");
-const { pipeline } = require('@xenova/transformers');
 const { FaissStore } = require('@langchain/community/vectorstores/faiss');
+
+let pipelineModule = null;
+async function getPipeline() {
+    if (!pipelineModule) {
+        const module = await import('@xenova/transformers');
+        pipelineModule = module.pipeline;
+    }
+    return pipelineModule;
+}
 
 // Custom Embeddings class to bridge Xenova (local MiniLM) with LangChain
 class LocalMiniLMEmbeddings {
@@ -15,12 +23,14 @@ class LocalMiniLMEmbeddings {
     async init() {
         if (!this.extractor) {
             console.log('Loading MiniLM model locally...');
+            const pipeline = await getPipeline();
             this.extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
         }
     }
 
     async embedDocuments(texts) {
         await this.init();
+        const pipeline = await getPipeline();
         const embeddings = [];
         for (const text of texts) {
             const output = await this.extractor(text, { pooling: 'mean', normalize: true });
