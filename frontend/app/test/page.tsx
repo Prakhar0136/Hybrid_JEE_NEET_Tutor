@@ -4,6 +4,7 @@ import axios from 'axios';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
+import { API_BASE } from '../config/api';
 
 type Question = { _id: string; topic: string; text: string; options: string[] };
 
@@ -42,7 +43,7 @@ export default function TestEngine() {
     }
 
     try {
-      const res = await axios.get('http://localhost:5000/api/test/generate', {
+      const res = await axios.get(`${API_BASE}/api/test/generate`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.data || res.data.length === 0) {
@@ -68,7 +69,7 @@ export default function TestEngine() {
     const token = Cookies.get('token');
     const finalSubmissionId = submissionId || uuidv4();
     try {
-      await axios.post('http://localhost:5000/api/test/submit', {
+      await axios.post(`${API_BASE}/api/test/submit`, {
         submissionId: finalSubmissionId,
         answers
       }, {
@@ -82,83 +83,124 @@ export default function TestEngine() {
     }
   };
 
-  if (loading) return <div className="flex h-screen items-center justify-center">Loading Test...</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-zinc-100 flex items-center justify-center font-sans">
+        <div className="border-4 border-black bg-black p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+          <p className="font-mono text-xs font-black uppercase tracking-widest text-[#7dd3fc] flex items-center gap-3">
+            <span className="w-2.5 h-2.5 bg-[#7dd3fc] animate-ping" />
+            GENERATING EXAM SUITE...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (!questions || questions.length === 0) return null;
 
   const currentQ = questions[currentIndex];
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
+  const isSelected = (optIdx: number) => answers[currentQ._id] === optIdx;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-zinc-100 py-8 px-4 font-sans">
+      <div className="max-w-4xl mx-auto">
 
-        {/* Header & Timer */}
-        <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm mb-6">
+        {/* Top Bar / Timer Header */}
+        <div className="border-4 border-black bg-white p-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] mb-6 flex flex-wrap justify-between items-center gap-4">
           <div className="flex items-center gap-3">
             <button
               onClick={() => {
-                if (confirm("Are you sure you want to exit the test? Your progress will not be saved.")) {
+                if (confirm("Are you sure you want to abort this examination? Progress will be lost.")) {
                   router.push('/dashboard');
                 }
               }}
-              className="text-sm font-semibold text-gray-500 hover:text-gray-800 transition"
+              className="border-2 border-black bg-white px-3 py-1.5 font-black text-xs uppercase tracking-widest text-black hover:bg-black hover:text-white transition-colors"
             >
-              ← Exit Test
+              ← ABORT TEST
             </button>
-            <span className="text-gray-300">|</span>
-            <h1 className="text-xl font-bold text-gray-800">JEE/NEET Mock Test</h1>
+            <div className="hidden sm:block border-l-2 border-black h-6" />
+            <span className="font-mono text-xs font-black uppercase tracking-wider text-zinc-600">
+              MOCK EXAMINATION ENGINE
+            </span>
           </div>
-          <div className={`font-mono text-xl font-bold ${timeLeft < 60 ? 'text-red-600' : 'text-blue-600'}`}>
-            Time Left: {minutes}:{seconds.toString().padStart(2, '0')}
+
+          <div className={`border-2 border-black px-4 py-1.5 font-mono text-sm font-black flex items-center gap-2 ${
+            timeLeft < 60 ? 'bg-red-600 text-white animate-pulse' : 'bg-black text-[#7dd3fc]'
+          }`}>
+            <span>TIME REMAINING:</span>
+            <span>{minutes}:{seconds.toString().padStart(2, '0')}</span>
           </div>
         </div>
 
-        {/* Question Card */}
-        <div className="bg-white p-8 rounded-lg shadow-md mb-6">
-          <div className="flex justify-between text-sm text-gray-500 mb-4 border-b pb-2">
-            <span>Question {currentIndex + 1} of {questions.length}</span>
-            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">{currentQ.topic}</span>
+        {/* Question Panel */}
+        <div className="border-4 border-black bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 sm:p-8 mb-6">
+          <div className="flex justify-between items-center border-b-2 border-black pb-3 mb-6">
+            <span className="font-mono text-xs font-black uppercase tracking-widest text-zinc-500">
+              QUESTION {currentIndex + 1} OF {questions.length}
+            </span>
+            <span className="border-2 border-black bg-[#7dd3fc] text-black font-mono text-xs font-black uppercase px-2.5 py-0.5">
+              {currentQ.topic}
+            </span>
           </div>
 
-          <h2 className="text-2xl font-semibold mb-6 text-gray-800">{currentQ.text}</h2>
+          <h2 className="text-xl sm:text-2xl font-black text-black leading-snug mb-8 tracking-tight">
+            {currentQ.text}
+          </h2>
 
           <div className="flex flex-col gap-3">
-            {currentQ.options.map((opt, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleSelectOption(currentQ._id, idx)}
-                className={`w-full text-left p-4 border rounded-lg transition-colors ${answers[currentQ._id] === idx
-                  ? 'border-blue-600 bg-blue-50 text-blue-800 font-medium'
-                  : 'border-gray-200 hover:bg-gray-50 text-gray-700'
+            {currentQ.options.map((opt, idx) => {
+              const active = isSelected(idx);
+              return (
+                <button
+                  key={idx}
+                  onClick={() => handleSelectOption(currentQ._id, idx)}
+                  className={`w-full text-left p-4 border-2 border-black font-mono text-sm transition-all flex items-start gap-3 ${
+                    active
+                      ? 'bg-black text-[#7dd3fc] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+                      : 'bg-white text-black hover:bg-[#f0f9ff] hover:translate-x-1'
                   }`}
-              >
-                <span className="inline-block w-8 font-semibold">{String.fromCharCode(65 + idx)}.</span> {opt}
-              </button>
-            ))}
+                >
+                  <span className={`inline-block font-black text-xs px-2 py-0.5 border ${
+                    active ? 'border-[#7dd3fc] text-[#7dd3fc]' : 'border-black text-black'
+                  }`}>
+                    {String.fromCharCode(65 + idx)}
+                  </span>
+                  <span className="flex-1 font-semibold leading-relaxed">{opt}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Navigation Footer */}
-        <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm">
+        {/* Navigation & Submit Controls */}
+        <div className="border-4 border-black bg-white p-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex justify-between items-center">
           <button
             disabled={currentIndex === 0}
             onClick={() => setCurrentIndex(prev => prev - 1)}
-            className="px-6 py-2 bg-gray-200 text-gray-700 rounded disabled:opacity-50"
+            className="px-6 py-2.5 border-2 border-black bg-white text-black font-black text-xs uppercase tracking-widest disabled:opacity-30 disabled:hover:bg-white hover:bg-black hover:text-white transition-colors"
           >
-            Previous
+            ← PREV
           </button>
 
+          <div className="font-mono text-xs font-black uppercase text-zinc-600 hidden sm:block">
+            {Object.keys(answers).length} OF {questions.length} ATTEMPTED
+          </div>
+
           {currentIndex === questions.length - 1 ? (
-            <button onClick={submitTest} className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded">
-              Submit Test
+            <button
+              onClick={submitTest}
+              className="px-6 py-2.5 border-2 border-black bg-red-600 hover:bg-black text-white font-black text-xs uppercase tracking-widest transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+            >
+              FINALIZE & SUBMIT ✓
             </button>
           ) : (
             <button
               onClick={() => setCurrentIndex(prev => prev + 1)}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded"
+              className="px-6 py-2.5 border-2 border-black bg-black text-white hover:bg-[#7dd3fc] hover:text-black font-black text-xs uppercase tracking-widest transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
             >
-              Next
+              NEXT →
             </button>
           )}
         </div>

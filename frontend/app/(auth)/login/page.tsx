@@ -5,7 +5,7 @@ import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+import { API_BASE } from '../../config/api';
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -18,7 +18,6 @@ export default function Login() {
         e.preventDefault();
         setError('');
         setLoading(true);
-
         try {
             const res = await axios.post(`${API_BASE}/api/auth/login`, { email, password });
             Cookies.set('token', res.data.access_token, { expires: 1 });
@@ -31,78 +30,88 @@ export default function Login() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4 py-12">
-            <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-sm p-8">
-                {/* Brand Header */}
-                <div className="text-center mb-8">
-                    <div className="inline-flex w-12 h-12 rounded-xl bg-blue-600 text-white font-bold text-lg items-center justify-center shadow-xs mb-3">
-                        AI
-                    </div>
-                    <h1 className="text-2xl font-bold text-slate-800">Welcome Back</h1>
-                    <p className="text-sm text-slate-500 mt-1">Sign in to your JEE & NEET AI Tutor</p>
+        <div className="min-h-screen bg-white flex">
+            {/* Left accent panel */}
+            <div className="hidden lg:flex lg:w-1/2 bg-black flex-col justify-between p-12">
+                <div>
+                    <p className="text-[#7dd3fc] font-black text-xs uppercase tracking-[0.3em]">JEE / NEET</p>
+                    <h1 className="mt-4 text-6xl font-black text-white uppercase leading-none tracking-tighter">
+                        STUDY<br />SMARTER.<br /><span className="text-[#7dd3fc]">NOT</span><br />HARDER.
+                    </h1>
                 </div>
+                <div className="border-t-2 border-zinc-700 pt-6">
+                    <p className="text-zinc-500 text-sm font-mono uppercase tracking-widest">AI-powered preparation</p>
+                    <p className="text-zinc-500 text-sm font-mono uppercase tracking-widest">for India's toughest exams</p>
+                </div>
+            </div>
 
-                {/* Error Banner */}
-                {error && (
-                    <div className="mb-5 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2.5 rounded-xl">
-                        {error}
-                    </div>
-                )}
-
-                {/* Form */}
-                <form onSubmit={handleLogin} className="space-y-4">
-                    <div>
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
-                            Email Address
-                        </label>
-                        <input
-                            type="email"
-                            placeholder="student@example.com"
-                            required
-                            className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all"
-                            value={email}
-                            onChange={e => setEmail(e.target.value)}
-                        />
+            {/* Right form panel */}
+            <div className="w-full lg:w-1/2 flex items-center justify-center px-8 py-16">
+                <div className="w-full max-w-sm">
+                    {/* Header */}
+                    <div className="mb-10">
+                        <div className="inline-block border-4 border-black bg-[#7dd3fc] px-3 py-1 mb-4">
+                            <span className="font-black text-xs uppercase tracking-widest text-black">Welcome back</span>
+                        </div>
+                        <h2 className="text-4xl font-black uppercase tracking-tighter text-black leading-none">SIGN IN</h2>
+                        <p className="mt-2 font-mono text-sm text-zinc-500 uppercase tracking-wider">Access your dashboard</p>
                     </div>
 
-                    <div>
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
-                            Password
-                        </label>
-                        <input
-                            type="password"
-                            placeholder="••••••••"
-                            required
-                            className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all"
-                            value={password}
-                            onChange={e => setPassword(e.target.value)}
-                        />
+                    {/* Error */}
+                    {error && (
+                        <div className="mb-6 border-l-4 border-red-600 bg-red-50 px-4 py-3">
+                            <p className="font-mono text-sm text-red-600 uppercase">{error}</p>
+                        </div>
+                    )}
+
+                    {/* Form */}
+                    <form onSubmit={handleLogin} className="space-y-5">
+                        <div>
+                            <label className="block font-black text-xs uppercase tracking-widest text-black mb-2">
+                                Email Address
+                            </label>
+                            <input
+                                type="email"
+                                placeholder="student@example.com"
+                                required
+                                className="w-full border-2 border-black bg-white px-4 py-3 font-mono text-sm text-black placeholder:text-zinc-400 focus:outline-none focus:border-[#7dd3fc] focus:bg-[#f0f9ff] transition-colors"
+                                value={email}
+                                onChange={e => setEmail(e.target.value)}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block font-black text-xs uppercase tracking-widest text-black mb-2">
+                                Password
+                            </label>
+                            <input
+                                type="password"
+                                placeholder="••••••••"
+                                required
+                                className="w-full border-2 border-black bg-white px-4 py-3 font-mono text-sm text-black placeholder:text-zinc-400 focus:outline-none focus:border-[#7dd3fc] focus:bg-[#f0f9ff] transition-colors"
+                                value={password}
+                                onChange={e => setPassword(e.target.value)}
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full border-4 border-black bg-black py-4 font-black text-sm uppercase tracking-widest text-white transition-colors hover:bg-[#7dd3fc] hover:text-black disabled:opacity-50"
+                        >
+                            {loading ? "SIGNING IN..." : "SIGN IN →"}
+                        </button>
+                    </form>
+
+                    {/* Switch */}
+                    <div className="mt-8 border-t-2 border-black pt-6">
+                        <p className="font-mono text-xs uppercase tracking-widest text-zinc-500">
+                            No account yet?{' '}
+                            <Link href="/signup" className="font-black text-black underline hover:text-[#0284c7]">
+                                CREATE ONE
+                            </Link>
+                        </p>
                     </div>
-
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full mt-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-3 px-4 rounded-xl text-sm transition-colors shadow-xs flex items-center justify-center gap-2"
-                    >
-                        {loading ? (
-                            <>
-                                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                                Signing in...
-                            </>
-                        ) : (
-                            "Sign In"
-                        )}
-                    </button>
-                </form>
-
-                {/* Switch to Signup */}
-                <div className="mt-6 pt-5 border-t border-slate-100 text-center">
-                    <p className="text-xs text-slate-600">
-                        Don't have an account yet?{' '}
-                        <Link href="/signup" className="text-blue-600 hover:text-blue-700 font-semibold hover:underline">
-                            Create an account
-                        </Link>
-                    </p>
                 </div>
             </div>
         </div>
