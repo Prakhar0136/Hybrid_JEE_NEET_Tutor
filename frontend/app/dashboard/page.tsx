@@ -17,6 +17,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Navbar from "../components/Navbar";
+import { API_BASE } from "../config/api";
 
 type AnalyticsData = {
     metrics: {
@@ -31,88 +32,58 @@ type AnalyticsData = {
     }[];
 };
 
-/* ── Custom markdown component overrides for beautiful rendering ── */
+/* ── Brutalist markdown components ── */
 const markdownComponents = {
     h1: (props: ComponentPropsWithoutRef<"h1">) => (
-        <h1
-            className="mb-4 mt-6 border-b border-indigo-200 pb-2 text-2xl font-extrabold tracking-tight text-indigo-900"
-            {...props}
-        />
+        <h1 className="mb-3 mt-6 border-b-4 border-black pb-2 text-2xl font-black uppercase tracking-tight text-black" {...props} />
     ),
     h2: (props: ComponentPropsWithoutRef<"h2">) => (
-        <h2
-            className="mb-3 mt-8 flex items-center gap-2 text-xl font-bold text-indigo-800"
-            {...props}
-        />
+        <h2 className="mb-2 mt-6 text-xl font-black uppercase tracking-tight text-black border-l-4 border-[#7dd3fc] pl-3" {...props} />
     ),
     h3: (props: ComponentPropsWithoutRef<"h3">) => (
-        <h3
-            className="mb-2 mt-6 text-lg font-semibold text-indigo-700"
-            {...props}
-        />
+        <h3 className="mb-2 mt-4 text-base font-black uppercase tracking-wider text-zinc-700" {...props} />
     ),
     p: (props: ComponentPropsWithoutRef<"p">) => (
-        <p className="mb-3 leading-relaxed text-gray-700" {...props} />
+        <p className="mb-3 font-mono text-sm leading-relaxed text-zinc-700" {...props} />
     ),
     strong: (props: ComponentPropsWithoutRef<"strong">) => (
-        <strong className="font-bold text-indigo-900" {...props} />
+        <strong className="font-black text-black" {...props} />
     ),
     ul: (props: ComponentPropsWithoutRef<"ul">) => (
-        <ul className="mb-4 ml-1 list-none space-y-1.5" {...props} />
-    ),
-    ol: (props: ComponentPropsWithoutRef<"ol">) => (
-        <ol className="mb-4 ml-1 list-none space-y-1.5" {...props} />
+        <ul className="mb-4 space-y-1" {...props} />
     ),
     li: (props: ComponentPropsWithoutRef<"li">) => (
-        <li className="flex items-start gap-2 text-gray-700">
-            <span className="mt-1.5 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-indigo-400" />
+        <li className="flex items-start gap-2 font-mono text-sm text-zinc-700">
+            <span className="mt-1 font-black text-[#7dd3fc] shrink-0">▶</span>
             <span {...props} />
         </li>
     ),
     table: (props: ComponentPropsWithoutRef<"table">) => (
-        <div className="my-4 overflow-x-auto rounded-xl border border-indigo-200 shadow-sm">
-            <table
-                className="min-w-full divide-y divide-indigo-100 text-sm"
-                {...props}
-            />
+        <div className="my-4 overflow-x-auto border-2 border-black">
+            <table className="min-w-full text-sm" {...props} />
         </div>
     ),
     thead: (props: ComponentPropsWithoutRef<"thead">) => (
-        <thead className="bg-indigo-600 text-white" {...props} />
+        <thead className="bg-black text-white" {...props} />
     ),
     th: (props: ComponentPropsWithoutRef<"th">) => (
-        <th
-            className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider"
-            {...props}
-        />
+        <th className="px-4 py-3 text-left font-black uppercase tracking-wider text-xs" {...props} />
     ),
     tbody: (props: ComponentPropsWithoutRef<"tbody">) => (
-        <tbody className="divide-y divide-indigo-50 bg-white" {...props} />
+        <tbody className="divide-y-2 divide-zinc-200 bg-white" {...props} />
     ),
     tr: (props: ComponentPropsWithoutRef<"tr">) => (
-        <tr
-            className="transition-colors hover:bg-indigo-50/60"
-            {...props}
-        />
+        <tr className="hover:bg-[#f0f9ff] transition-colors" {...props} />
     ),
     td: (props: ComponentPropsWithoutRef<"td">) => (
-        <td
-            className="whitespace-normal px-4 py-3 text-gray-700"
-            {...props}
-        />
+        <td className="px-4 py-3 font-mono text-xs text-zinc-700 align-top" {...props} />
     ),
     blockquote: (props: ComponentPropsWithoutRef<"blockquote">) => (
-        <blockquote
-            className="my-4 rounded-r-lg border-l-4 border-indigo-400 bg-indigo-50 px-4 py-3 italic text-indigo-800"
-            {...props}
-        />
+        <blockquote className="my-4 border-l-4 border-black bg-zinc-100 px-4 py-3 font-mono text-sm italic text-zinc-600" {...props} />
     ),
-    hr: () => <hr className="my-6 border-indigo-200" />,
+    hr: () => <hr className="my-6 border-t-2 border-black" />,
     code: (props: ComponentPropsWithoutRef<"code">) => (
-        <code
-            className="rounded bg-indigo-100 px-1.5 py-0.5 text-xs font-medium text-indigo-800"
-            {...props}
-        />
+        <code className="bg-zinc-900 px-1.5 py-0.5 text-xs font-mono text-[#7dd3fc]" {...props} />
     ),
 };
 
@@ -122,111 +93,61 @@ export default function Dashboard() {
     const [studyPlan, setStudyPlan] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [planError, setPlanError] = useState<string | null>(null);
-
     const router = useRouter();
 
-    // Fetch dashboard analytics
     const fetchAnalytics = useCallback(async () => {
         const token = Cookies.get("token");
-
-        if (!token) {
-            router.push("/login");
-            return;
-        }
-
+        if (!token) { router.push("/login"); return; }
         try {
             setError(null);
-
-            const res = await axios.get(
-                "http://localhost:5000/api/test/analytics",
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            );
-
+            const res = await axios.get(`${API_BASE}/api/test/analytics`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
             setData(res.data);
         } catch (err: any) {
-            console.error("Failed to fetch analytics:", err);
-
-            if (err.response?.status === 401) {
-                Cookies.remove("token");
-                router.push("/login");
-                return;
-            }
-
-            setError(
-                err.response?.data?.message ||
-                "Failed to load analytics. Please check that the backend is running."
-            );
+            if (err.response?.status === 401) { Cookies.remove("token"); router.push("/login"); return; }
+            setError(err.response?.data?.message || "Failed to load analytics. Check backend is running.");
         }
     }, [router]);
 
-    useEffect(() => {
-        fetchAnalytics();
-    }, [fetchAnalytics]);
+    useEffect(() => { fetchAnalytics(); }, [fetchAnalytics]);
 
-    // Generate a personalized AI study plan
     const generateAIPlan = async () => {
         const token = Cookies.get("token");
-
-        if (!token) {
-            router.push("/login");
-            return;
-        }
-
+        if (!token) { router.push("/login"); return; }
         setIsGenerating(true);
         setPlanError(null);
-
         try {
-            const res = await axios.get(
-                "http://localhost:5000/api/ai/study-plan",
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            );
-
-            if (!res.data?.plan) {
-                throw new Error("The server returned an empty study plan.");
-            }
-
+            const res = await axios.get(`${API_BASE}/api/ai/study-plan`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.data?.plan) throw new Error("The server returned an empty study plan.");
             setStudyPlan(res.data.plan);
         } catch (err: any) {
-            console.error("Failed to generate AI study plan:", err);
-
-            setPlanError(
-                err.response?.data?.message ||
-                err.message ||
-                "Failed to generate AI plan. Please try again."
-            );
+            setPlanError(err.response?.data?.message || err.message || "Failed to generate AI plan. Please try again.");
         } finally {
             setIsGenerating(false);
         }
     };
 
-    // Loading state
     if (!data && !error) {
         return (
-            <div className="flex h-screen items-center justify-center bg-gray-50">
-                Loading Dashboard...
+            <div className="flex h-screen items-center justify-center bg-white">
+                <div className="border-4 border-black bg-black px-8 py-4">
+                    <p className="font-black uppercase tracking-widest text-[#7dd3fc] text-sm">LOADING DASHBOARD...</p>
+                </div>
             </div>
         );
     }
 
-    // Analytics error state
     if (error) {
         return (
-            <div className="flex h-screen flex-col items-center justify-center gap-4 bg-gray-50 p-6 text-center">
-                <p className="font-medium text-red-600">{error}</p>
-
-                <button
-                    onClick={fetchAnalytics}
-                    className="rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
-                >
-                    Try Again
+            <div className="flex h-screen flex-col items-center justify-center gap-6 bg-white p-6 text-center">
+                <div className="border-l-4 border-red-600 bg-red-50 px-6 py-4 text-left">
+                    <p className="font-mono text-sm font-bold text-red-600 uppercase">{error}</p>
+                </div>
+                <button onClick={fetchAnalytics} className="border-4 border-black bg-black px-6 py-3 font-black text-sm uppercase tracking-widest text-white hover:bg-[#7dd3fc] hover:text-black transition-colors">
+                    RETRY
                 </button>
             </div>
         );
@@ -234,278 +155,157 @@ export default function Dashboard() {
 
     if (!data) return null;
 
-    // Prepare chart data
     const chartData = data.recentSubmissions.map((sub, idx) => ({
-        name: `Test ${idx + 1}`,
-        score:
-            sub.totalQuestions > 0
-                ? (sub.score / sub.totalQuestions) * 100
-                : 0,
+        name: `T${idx + 1}`,
+        score: sub.totalQuestions > 0 ? Math.round((sub.score / sub.totalQuestions) * 100) : 0,
     }));
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-zinc-100">
             <Navbar />
-            <div className="p-4 sm:p-8">
-                <div className="mx-auto max-w-6xl">
-                    {/* Header */}
-                    <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <h1 className="text-2xl font-bold text-gray-800 sm:text-3xl">
-                            Your AI Study Dashboard
+
+            <div className="mx-auto max-w-7xl px-4 py-8 sm:px-8">
+
+                {/* Page Title */}
+                <div className="mb-8 border-b-4 border-black pb-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+                    <div>
+                        <p className="font-mono text-xs uppercase tracking-[0.3em] text-zinc-500 mb-1">Overview</p>
+                        <h1 className="text-4xl font-black uppercase tracking-tighter text-black leading-none">
+                            STUDY<br className="sm:hidden" /> DASHBOARD
                         </h1>
-
-                        <div className="flex flex-wrap gap-3">
-                            <button
-                                onClick={() => router.push("/chat")}
-                                className="rounded-lg border border-gray-300 bg-white px-5 py-2 font-semibold text-gray-700 transition hover:bg-gray-50"
-                            >
-                                💬 Ask AI Tutor
-                            </button>
-                            <button
-                                onClick={() => router.push("/flashcards")}
-                                className="rounded-lg border border-indigo-200 bg-white px-5 py-2 font-semibold text-indigo-600 transition hover:bg-indigo-50"
-                            >
-                                📚 Revision Flashcards
-                            </button>
-                            <button
-                                onClick={() => router.push("/test")}
-                                className="rounded-lg bg-blue-600 px-6 py-2 font-semibold text-white transition hover:bg-blue-700"
-                            >
-                                Start New Test
-                            </button>
-                        </div>
                     </div>
+                    <div className="flex gap-2 flex-wrap">
+                        <button onClick={() => router.push("/chat")}
+                            className="border-2 border-black bg-white px-4 py-2 font-black text-xs uppercase tracking-widest text-black hover:bg-[#7dd3fc] transition-colors">
+                            AI CHAT
+                        </button>
+                        <button onClick={() => router.push("/flashcards")}
+                            className="border-2 border-black bg-white px-4 py-2 font-black text-xs uppercase tracking-widest text-black hover:bg-[#7dd3fc] transition-colors">
+                            FLASHCARDS
+                        </button>
+                        <button onClick={() => router.push("/test")}
+                            className="border-4 border-black bg-black px-5 py-2 font-black text-xs uppercase tracking-widest text-white hover:bg-red-600 transition-colors">
+                            START TEST →
+                        </button>
+                    </div>
+                </div>
 
-                {/* Top Metric Cards */}
-                <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
+                {/* Metric Cards */}
+                <div className="mb-6 grid grid-cols-1 gap-0 sm:grid-cols-3 border-2 border-black">
                     {/* Total Tests */}
-                    <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
-                        <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
-                            Total Tests Taken
-                        </h3>
-
-                        <p className="text-4xl font-bold text-blue-600">
-                            {data.metrics.totalTests}
-                        </p>
+                    <div className="border-b-2 sm:border-b-0 sm:border-r-2 border-black bg-white p-6">
+                        <p className="font-mono text-xs uppercase tracking-widest text-zinc-500 mb-3">TOTAL TESTS TAKEN</p>
+                        <p className="text-6xl font-black text-black leading-none">{data.metrics.totalTests}</p>
                     </div>
 
                     {/* Average Accuracy */}
-                    <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
-                        <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
-                            Average Accuracy
-                        </h3>
-
-                        <p className="text-4xl font-bold text-green-600">
-                            {data.metrics.averageScore}%
-                        </p>
+                    <div className="border-b-2 sm:border-b-0 sm:border-r-2 border-black bg-[#7dd3fc] p-6">
+                        <p className="font-mono text-xs uppercase tracking-widest text-black/60 mb-3">AVERAGE ACCURACY</p>
+                        <p className="text-6xl font-black text-black leading-none">{data.metrics.averageScore}<span className="text-3xl">%</span></p>
                     </div>
 
                     {/* Weak Topics */}
-                    <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
-                        <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
-                            Needs Improvement
-                        </h3>
-
-                        <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="bg-black p-6">
+                        <p className="font-mono text-xs uppercase tracking-widest text-zinc-500 mb-3">NEEDS IMPROVEMENT</p>
+                        <div className="flex flex-wrap gap-2 mt-1">
                             {data.metrics.topWeakTopics.length > 0 ? (
                                 data.metrics.topWeakTopics.map((topic) => (
-                                    <span
-                                        key={topic}
-                                        className="rounded-full bg-red-100 px-3 py-1 text-sm font-medium text-red-700"
-                                    >
+                                    <span key={topic} className="border-2 border-red-500 bg-red-600 px-2 py-1 font-mono text-xs font-black uppercase text-white">
                                         {topic}
                                     </span>
                                 ))
                             ) : (
-                                <span className="text-gray-400">
-                                    Take tests to identify weak areas
-                                </span>
+                                <span className="font-mono text-xs text-zinc-500 uppercase">Take tests to identify weak areas</span>
                             )}
                         </div>
                     </div>
                 </div>
 
-                {/* Performance Chart — full width */}
-                <div className="mb-6 rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
-                    <h2 className="mb-6 text-xl font-bold text-gray-800">
-                        Performance Trend
-                    </h2>
-
-                    <div className="h-80 w-full">
+                {/* Performance Chart */}
+                <div className="mb-6 border-2 border-black bg-white">
+                    <div className="border-b-2 border-black px-6 py-3 flex items-center gap-3">
+                        <div className="w-2 h-2 bg-[#7dd3fc] border border-black"></div>
+                        <p className="font-black text-xs uppercase tracking-widest text-black">PERFORMANCE TREND</p>
+                    </div>
+                    <div className="h-64 w-full p-4">
                         {chartData.length > 0 ? (
-                            <ResponsiveContainer
-                                width="100%"
-                                height="100%"
-                            >
-                                <LineChart
-                                    data={chartData}
-                                    margin={{
-                                        top: 5,
-                                        right: 20,
-                                        bottom: 5,
-                                        left: 0,
-                                    }}
-                                >
-                                    <CartesianGrid
-                                        strokeDasharray="3 3"
-                                        vertical={false}
-                                        stroke="#E5E7EB"
-                                    />
-
-                                    <XAxis
-                                        dataKey="name"
-                                        stroke="#6B7280"
-                                        fontSize={12}
-                                        tickLine={false}
-                                    />
-
-                                    <YAxis
-                                        stroke="#6B7280"
-                                        fontSize={12}
-                                        tickLine={false}
-                                        domain={[0, 100]}
-                                        tickFormatter={(value) =>
-                                            `${value}%`
-                                        }
-                                    />
-
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" vertical={false} />
+                                    <XAxis dataKey="name" stroke="#000" fontSize={11} tickLine={false} fontWeight={900} />
+                                    <YAxis stroke="#000" fontSize={11} tickLine={false} domain={[0, 100]}
+                                        tickFormatter={(v) => `${v}%`} fontWeight={900} />
                                     <Tooltip
-                                        formatter={(value) => [
-                                            `${Number(value).toFixed(1)}%`,
-                                            "Accuracy",
-                                        ]}
-                                        contentStyle={{
-                                            borderRadius: "8px",
-                                            border: "none",
-                                            boxShadow:
-                                                "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-                                        }}
+                                        formatter={(value) => [`${Number(value).toFixed(0)}%`, "Accuracy"]}
+                                        contentStyle={{ border: "2px solid black", borderRadius: 0, fontFamily: "monospace", fontWeight: 900, fontSize: 12 }}
                                     />
-
-                                    <Line
-                                        type="monotone"
-                                        dataKey="score"
-                                        name="Accuracy"
-                                        stroke="#2563EB"
-                                        strokeWidth={3}
-                                        dot={{
-                                            r: 4,
-                                            fill: "#2563EB",
-                                        }}
-                                        activeDot={{ r: 6 }}
-                                    />
+                                    <Line type="linear" dataKey="score" stroke="#000" strokeWidth={3}
+                                        dot={{ r: 5, fill: "#7dd3fc", stroke: "#000", strokeWidth: 2 }}
+                                        activeDot={{ r: 7, fill: "#000" }} />
                                 </LineChart>
                             </ResponsiveContainer>
                         ) : (
-                            <div className="flex h-full items-center justify-center text-center text-gray-400">
-                                Complete your first test to see your
-                                progress chart.
+                            <div className="flex h-full items-center justify-center">
+                                <p className="font-mono text-xs uppercase tracking-widest text-zinc-400">Complete your first test to see your progress chart.</p>
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* AI Study Tutor — full-width card */}
-                <div className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-blue-50 p-6 shadow-md sm:p-8">
-                    {/* Header row */}
-                    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                {/* AI Study Tutor */}
+                <div className="border-2 border-black bg-white">
+                    {/* Header */}
+                    <div className="border-b-2 border-black px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-black">
                         <div>
-                            <h2 className="flex items-center gap-2 text-2xl font-extrabold text-indigo-900">
-                                <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-lg text-white shadow-sm">
-                                    ✨
-                                </span>
-                                AI Study Tutor
-                            </h2>
-                            <p className="mt-1 text-sm text-indigo-600">
-                                Get a personalized action plan based on your
-                                test performance and weak areas.
-                            </p>
+                            <p className="font-mono text-xs uppercase tracking-widest text-zinc-500 mb-0.5">AI-POWERED</p>
+                            <h2 className="text-xl font-black uppercase tracking-tighter text-white">STUDY PLAN GENERATOR</h2>
                         </div>
-
                         {studyPlan && (
                             <button
-                                onClick={() => {
-                                    setStudyPlan(null);
-                                    setPlanError(null);
-                                }}
-                                className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-white px-4 py-2 text-sm font-semibold text-indigo-600 shadow-sm transition hover:bg-indigo-50"
+                                onClick={() => { setStudyPlan(null); setPlanError(null); }}
+                                className="border-2 border-zinc-600 px-4 py-2 font-black text-xs uppercase tracking-widest text-zinc-400 hover:border-white hover:text-white transition-colors self-start sm:self-auto"
                             >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-4 w-4"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        fillRule="evenodd"
-                                        d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-                                        clipRule="evenodd"
-                                    />
-                                </svg>
-                                Regenerate
+                                ↺ REGENERATE
                             </button>
                         )}
                     </div>
 
-                    {!studyPlan ? (
-                        <>
-                            {planError && (
-                                <div
-                                    role="alert"
-                                    className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
-                                >
-                                    {planError}
-                                </div>
-                            )}
-
-                            <button
-                                onClick={generateAIPlan}
-                                disabled={isGenerating}
-                                className="group relative w-full overflow-hidden rounded-xl bg-indigo-600 py-4 text-lg font-bold text-white shadow-lg transition-all hover:bg-indigo-700 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                {isGenerating ? (
-                                    <span className="flex items-center justify-center gap-3">
-                                        <svg
-                                            className="h-5 w-5 animate-spin"
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <circle
-                                                className="opacity-25"
-                                                cx="12"
-                                                cy="12"
-                                                r="10"
-                                                stroke="currentColor"
-                                                strokeWidth="4"
-                                            />
-                                            <path
-                                                className="opacity-75"
-                                                fill="currentColor"
-                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                            />
-                                        </svg>
-                                        Analyzing Your Performance…
-                                    </span>
-                                ) : (
-                                    "🚀 Generate My Study Plan"
+                    <div className="p-6">
+                        {!studyPlan ? (
+                            <div>
+                                <p className="font-mono text-sm text-zinc-500 uppercase tracking-wider mb-6">
+                                    Get a personalized 3-day action plan based on your test performance and weak areas.
+                                </p>
+                                {planError && (
+                                    <div className="mb-4 border-l-4 border-red-600 bg-red-50 px-4 py-3">
+                                        <p className="font-mono text-sm text-red-600 uppercase">{planError}</p>
+                                    </div>
                                 )}
-                            </button>
-                        </>
-                    ) : (
-                        <div className="rounded-xl border border-indigo-100 bg-white p-4 shadow-inner sm:p-6">
-                            <div className="max-h-[70vh] overflow-y-auto pr-2">
-                                <ReactMarkdown
-                                    remarkPlugins={[remarkGfm]}
-                                    components={markdownComponents}
+                                <button
+                                    onClick={generateAIPlan}
+                                    disabled={isGenerating}
+                                    className="w-full border-4 border-black bg-black py-5 font-black text-sm uppercase tracking-widest text-white transition-colors hover:bg-[#7dd3fc] hover:text-black disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                                 >
+                                    {isGenerating ? (
+                                        <>
+                                            <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent animate-spin" />
+                                            ANALYZING PERFORMANCE...
+                                        </>
+                                    ) : (
+                                        "GENERATE MY STUDY PLAN →"
+                                    )}
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="max-h-[75vh] overflow-y-auto pr-1">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                                     {studyPlan}
                                 </ReactMarkdown>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
-            </div>
+
             </div>
         </div>
     );
